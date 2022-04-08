@@ -6,9 +6,9 @@ app.set("view options", {layout: false});
 app.use(express.static(__dirname + '/public'));
 
 //#region old school
-const bodyContents = `<center><h2><BR><font face="Comic Sans MS" color = #5555aa>Hello WebSockets!</font></h2>
+const bodyContents = `<center><h1><BR><font face="Comic Sans MS" color = #5555aa>Hello WebSockets!!</font></h1>
 <p><a href="http://localhost:8000/player/spark/1/2/3"><font color = #00eeff>example</font></a></p></center>`;
-const bgImage = "https://live.staticflickr.com/1863/29641403557_f5b238b603_o.jpg";
+const bgImage = "https://live.staticflickr.com/1863/29641403557_f5b238b603_o.jpg?width=*";
 //#endregion
 
 app.get("/", (req, res) => {
