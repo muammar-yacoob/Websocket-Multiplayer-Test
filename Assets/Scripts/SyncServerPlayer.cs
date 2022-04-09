@@ -1,19 +1,23 @@
 using SimpleJSON;
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
 
 public class SyncServerPlayer : MonoBehaviour
 {
-    [Range(0.01f,10f)] private float networkSmoothingFactor = 0.5f;
+    [SerializeField] [Range(0.01f,1f)] private float networkSmoothingFactor = 0.5f; //1 being realtime
     [SerializeField] private string playerID = "Player1";//replaced with unique ID at runtime
+    [SerializeField] private Transform serverPlayer;
+    [SerializeField] TMP_Text delayText;
     
     private Vector3 playerPosition = Vector3.zero;
+    private float FPSUpdateThresh = 1f;
+    private float lastFPS;
 
     private void Awake() => playerID = gameObject.GetInstanceID().ToString();
     private void Update()
     {
-
         syncRemotePos();
     }
 
@@ -27,21 +31,28 @@ public class SyncServerPlayer : MonoBehaviour
             $"/{playerPosition.y}" +
             $"/{playerPosition.z}";
 
-        StartCoroutine(GetDataFromServer(url));
+        StartCoroutine(SendLocationToServer(url));
     }
 
-    IEnumerator GetDataFromServer(string serverURL)
+    IEnumerator SendLocationToServer(string serverURL)
     {
         var startTime = Time.time;
-        UnityWebRequest www = UnityWebRequest.Get(serverURL);
+        UnityWebRequest www = UnityWebRequest.Get(serverURL); //Sending Data
         yield return www.SendWebRequest();
         var endTime = Time.time;
         var elapsedTime = endTime - startTime;
+        var currentFPS = 1 / elapsedTime;
+
+        if (Mathf.Abs(currentFPS - lastFPS) < FPSUpdateThresh)
+        {
+            delayText.text = "Network FPS: " + Mathf.Round(1 / elapsedTime).ToString();
+        }
+        lastFPS = currentFPS;
         //Debug.Log($"Time Elapsed{elapsedTime}, i.e.{1/elapsedTime}/second");
 
         if (www.result != UnityWebRequest.Result.Success)
         {
-            Debug.LogError("Something went wrong: " + www.error);
+            Debug.LogError("Server Down\n" + www.error);
         }
         else
         {
@@ -61,9 +72,9 @@ public class SyncServerPlayer : MonoBehaviour
         float y = node["pos"][1]["value"];
         float z = node["pos"][2]["value"];
 
-        Debug.Log($"{playerID} Remote pos: ({x},{y},{z})");
+        //Debug.Log($"Rcvd: {playerID}, Remote pos: ({x},{y},{z})");
         var newPos = new Vector3(x, y, z);
-        transform.position = Vector3.Slerp(transform.position, newPos,Time.deltaTime * networkSmoothingFactor);
+        serverPlayer.position = Vector3.Slerp(serverPlayer.position, newPos, networkSmoothingFactor );
     }
 }
 

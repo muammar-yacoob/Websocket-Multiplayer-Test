@@ -1,6 +1,8 @@
 const express = require("express");
 const path = require('path');
 const app = express();
+const host = 'localhost';
+const port = 8000;
 
 app.set("view options", {layout: false});
 app.use(express.static(__dirname + '/public'));
@@ -33,7 +35,7 @@ app.get("/player/:id/:x/:y/:z", (req, res) => {
     res.json(playerData);
 });
 
-app.listen( 8000, () => {
-    console.log("Server started!");
-} );
+app.listen(port, host, () => {
+    console.log(`Server is running on http://${host}:${port}`);//logging to terminal
+});
 
