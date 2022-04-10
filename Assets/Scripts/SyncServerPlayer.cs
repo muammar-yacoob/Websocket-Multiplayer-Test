@@ -1,21 +1,34 @@
-using SimpleJSON;
+using Newtonsoft.Json;
 using System.Collections;
+using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
 
 public class SyncServerPlayer : MonoBehaviour
 {
-    [SerializeField] [Range(0.01f,1f)] private float networkSmoothingFactor = 0.5f; //1 being realtime
-    [SerializeField] private string playerID = "Player1";//replaced with unique ID at runtime
-    [SerializeField] private Transform serverPlayer;
+    [Header("Network Parameters")]
+    [SerializeField] [Range(0.01f, 1f)] private float networkSmoothingFactor = 0.05f; //1 being realtime
     [SerializeField] TMP_Text delayText;
-    
-    private Vector3 playerPosition = Vector3.zero;
+    [SerializeField] bool simulateNetworkPlayer;
+
     private float FPSUpdateThresh = 1f;
     private float lastFPS;
+    private string serverURL;
+    private Vector3 serverPos;
 
-    private void Awake() => playerID = gameObject.GetInstanceID().ToString();
+    private void Awake()
+    {
+        serverURL = $"localhost:8000/unity";
+    }
+    private void OnDrawGizmos()
+    {
+        if (!simulateNetworkPlayer) return;
+        var smoothedPos = Vector3.Slerp(transform.position, serverPos, networkSmoothingFactor * Time.deltaTime);
+        Gizmos.color = new Color(1, 0, 1, 0.5f);
+        Gizmos.DrawCube(smoothedPos, Vector3.one *0.95f);
+    }
+
     private void Update()
     {
         syncRemotePos();
@@ -23,74 +36,53 @@ public class SyncServerPlayer : MonoBehaviour
 
     void syncRemotePos()
     {
-        playerPosition = transform.position;
+        var playerData = new PlayerData(transform.GetInstanceID(), transform.name, transform.position);
+        string playersDataJson = JsonConvert.SerializeObject(playerData); //convert to JSON
 
-        string url = $"localhost:8000/player" +
-            $"/{playerID}" +
-            $"/{playerPosition.x}" +
-            $"/{playerPosition.y}" +
-            $"/{playerPosition.z}";
-
-        StartCoroutine(SendLocationToServer(url));
+        StartCoroutine(Post(serverURL, playersDataJson));
     }
 
-    IEnumerator SendLocationToServer(string serverURL)
+    IEnumerator Post(string url, string bodyJsonString)
     {
+        var request = new UnityWebRequest(url, "GET");//POST
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(bodyJsonString);
+        request.uploadHandler = (UploadHandler)new UploadHandlerRaw(bodyRaw);
+        request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
+        //request.SetRequestHeader("Content-type", "text/plain");
+        request.SetRequestHeader("Content-Type", "application/json");
         var startTime = Time.time;
-        UnityWebRequest www = UnityWebRequest.Get(serverURL); //Sending Data
-        yield return www.SendWebRequest();
+        yield return request.SendWebRequest();
+        LogServerTime(startTime);
+
+        if (request.result != UnityWebRequest.Result.Success)
+        {
+            Debug.LogError(request.error, this);
+        }
+        else
+        {
+            string dataRcvd = request.downloadHandler.text;
+            //Debug.Log("Rcvd: " + dataRcvd);
+            ProcessServerResponse(dataRcvd);
+        }
+    }
+    void ProcessServerResponse(string rawResponse)
+    {
+        var playerData = JsonConvert.DeserializeObject<PlayerData>(rawResponse);
+        serverPos = playerData.Pos;
+    }
+
+    private void LogServerTime(float startTime)
+    {
         var endTime = Time.time;
         var elapsedTime = endTime - startTime;
         var currentFPS = 1 / elapsedTime;
-
         if (Mathf.Abs(currentFPS - lastFPS) < FPSUpdateThresh)
         {
             delayText.text = "Network FPS: " + Mathf.Round(1 / elapsedTime).ToString();
         }
         lastFPS = currentFPS;
-        //Debug.Log($"Time Elapsed{elapsedTime}, i.e.{1/elapsedTime}/second");
-
-        if (www.result != UnityWebRequest.Result.Success)
-        {
-            Debug.LogError("Server Down\n" + www.error);
-        }
-        else
-        {
-            string dataRcvd = www.downloadHandler.text;
-            //Debug.Log("Rcvd: " + dataRcvd);
-            ProcessServerResponse(dataRcvd);
-        }
+        Debug.Log($"Time Elapsed{elapsedTime}, i.e.{1 / elapsedTime}/second");
     }
 
-    void ProcessServerResponse(string rawResponse)
-    {
-        JSONNode node = JSON.Parse(rawResponse);
-        string playerID = node["playerID"].Value;
-        //if (playerID == this.playerID) return; //skip current player
 
-        float x = node["pos"][0]["value"];
-        float y = node["pos"][1]["value"];
-        float z = node["pos"][2]["value"];
-
-        //Debug.Log($"Rcvd: {playerID}, Remote pos: ({x},{y},{z})");
-        var newPos = new Vector3(x, y, z);
-        serverPlayer.position = Vector3.Slerp(serverPlayer.position, newPos, networkSmoothingFactor );
-    }
 }
-
-#region using Unity JsonUtility
-//PlayerData d1 = JsonUtility.FromJson<PlayerData>(rawResponse);
-//Debug.Log($"PlayerID:{d1.playerID}, Pos{d1.pos.X}");
-public class PlayerData
-{
-    //these will have to match field names on the server
-    public string playerID;
-    public string playerName;
-    public POS pos;
-
-    public class POS
-    {
-        public float X, Y, Z;
-    }
-}
-#endregion

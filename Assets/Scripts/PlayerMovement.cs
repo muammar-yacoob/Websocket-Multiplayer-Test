@@ -39,4 +39,6 @@ public class PlayerMovement : MonoBehaviour
         if (transform.position.y < -50)
             transform.position = startPos;
     }
+
+
 }

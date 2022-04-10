@@ -9,8 +9,9 @@ app.use(express.static(__dirname + '/public'));
 
 //#region Webpage
 //#region old school
+const jsonExample = `http://localhost:8000/unity/{"playerID":15078,"playerName":"BlueSphere","pos":{"x":0,"y":1.85,"z":0}}`;
 const bodyContents = `<center><h1><BR><font face="Comic Sans MS" color = #5555aa>Hello WebSockets!!</font></h1>
-<p><a href="http://localhost:8000/player/spark/1/2/3"><font color = #00eeff>example</font></a></p></center>`;
+<p><a href="${jsonExample}"><font color = #00eeff>example</font></a></p></center>`;
 const bgImage = "https://live.staticflickr.com/1863/29641403557_f5b238b603_o.jpg?width=*";
 //#endregion
 
@@ -26,15 +27,10 @@ app.get("/", (req, res) => {
 
 //Accessed From Unity
 app.use(express.json());
-app.get("/", (req, res) => {
+app.get("/unity/", (req, res) => {
     res.setHeader('Content-Type', 'application/json');
-    //res.setHeader('Content-Type', 'text/plain');
-    
-    console.log("received json");
-    console.log(req.body);
+    //console.log(`received json: ${req.body}`);
     res.send(req.body);//echo result back
-
-    res.json(req);//send it back
 });
 
 app.listen(port, host, () => {
