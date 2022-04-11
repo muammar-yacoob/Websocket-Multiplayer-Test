@@ -14,6 +14,7 @@ public class SyncManager : MonoBehaviour
     [SerializeField] bool simulateNetworkPlayer;
     [SerializeField] [Range(0.0f, 1f)] private float simulatedDelay;
     [SerializeField] TMP_Text fpsText;
+    
 
     private string serverURL;
     private List<PlayerData> lastPlayersDataSent;
@@ -27,29 +28,17 @@ public class SyncManager : MonoBehaviour
     {
         serverURL = $"localhost:8000/unity";
         playersDataSent = new List<PlayerData>();
+        lastPlayersDataSent = new List<PlayerData>();
 
         //initialise playersData
         //players.ToList().ForEach(p => playersData.Add(new PlayerData(p.GetInstanceID(), p.name, p.position)));
 
+        players = GetComponentsInChildren<Transform>().ToList();
         foreach (var player in players)
         {
             //populate initial players data
             playersDataSent.Add(new PlayerData(player.GetInstanceID(), player.name, player.position));
-            CreateServerGhost(player);
         }
-    }
-
-    private void CreateServerGhost(Transform player)
-    {
-        //add network transform debugger
-        var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        cube.transform.parent = player;
-        cube.transform.localScale = Vector3.one / 3;
-        cube.transform.localPosition = Vector3.zero;
-        var cubeColor = Color.cyan;
-        cubeColor.a = 0.3f;
-        cube.GetComponent<MeshRenderer>().material.color = cubeColor;
-        cube.name = $"{player.name}-network transform";
     }
 
     private void Update() => syncRemotePos();
@@ -68,10 +57,13 @@ public class SyncManager : MonoBehaviour
             //playersData[ctr] = 
             //ctr++;
             var pData = new PlayerData(player.GetInstanceID(), player.name, player.position);
+
             playersDataSent.Add(pData);
         }
 
-        //if (playersDataSent != lastPlayersDataSent)//players moved
+        //bool dataChanged = Enumerable.SequenceEqual(playersDataSent.OrderBy(e => e), lastPlayersDataSent.OrderBy(e => e));
+        bool dataChanged = Enumerable.SequenceEqual(playersDataSent,lastPlayersDataSent);
+        if (dataChanged)
         {
             //Debug.Log("player moved, sending...");
             string playersDataJson = JsonConvert.SerializeObject(playersDataSent); //convert to JSON
