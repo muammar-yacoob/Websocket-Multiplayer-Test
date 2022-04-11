@@ -299,9 +299,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b3c228e40a80839428d03703b23607e5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  networkSmoothingFactor: 0.01
-  delayText: {fileID: 1165026957}
+  networkSmoothingFactor: 0.5
+  fpsText: {fileID: 1165026957}
   simulateNetworkPlayer: 1
+  simulatedDelay: 0.065
 --- !u!65 &455999402
 BoxCollider:
   m_ObjectHideFlags: 0

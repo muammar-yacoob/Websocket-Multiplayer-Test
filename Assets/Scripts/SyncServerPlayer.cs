@@ -11,6 +11,7 @@ public class SyncServerPlayer : MonoBehaviour
     [SerializeField] [Range(0.01f, 1f)] private float networkSmoothingFactor = 0.05f; //1 being realtime
     [SerializeField] TMP_Text fpsText;
     [SerializeField] bool simulateNetworkPlayer;
+    [SerializeField] [Range(0.01f, 1f)] private float simulatedDelay;
 
     private float FPSUpdateThresh = 1f;
     private float lastFPS;
@@ -21,13 +22,7 @@ public class SyncServerPlayer : MonoBehaviour
     {
         serverURL = $"localhost:8000/unity";
     }
-    private void OnDrawGizmos()
-    {
-        if (!simulateNetworkPlayer) return;
-        var smoothedPos = Vector3.Slerp(transform.position, serverPos, networkSmoothingFactor * Time.deltaTime);
-        Gizmos.color = new Color(1, 0, 1, 0.5f);
-        Gizmos.DrawCube(smoothedPos, Vector3.one *0.95f);
-    }
+
 
     private void LateUpdate()
     {
@@ -52,6 +47,7 @@ public class SyncServerPlayer : MonoBehaviour
         request.SetRequestHeader("Content-Type", "application/json");
         var startTime = Time.time;
         yield return request.SendWebRequest();
+        yield return new WaitForSeconds(simulatedDelay);
         LogServerTime(startTime);
 
         if (request.result != UnityWebRequest.Result.Success)
@@ -75,15 +71,20 @@ public class SyncServerPlayer : MonoBehaviour
     {
         var endTime = Time.time;
         var elapsedTime = endTime - startTime;
-        var currentFPS = 1 / elapsedTime;
+        var currentFPS = Mathf.Round(1 / elapsedTime);
         if (Mathf.Abs(currentFPS - lastFPS) < FPSUpdateThresh)
         {
-            fpsText.text = "Network FPS: " + Mathf.Round(1 / elapsedTime).ToString();
+            fpsText.text = "Network FPS: " + currentFPS.ToString("00");
         }
         lastFPS = currentFPS;
         //Debug.Log($"Time Elapsed{elapsedTime}, i.e.{currentFPS}");
-        fpsText.text = currentFPS.ToString("00");
+        
     }
-
-
+    private void OnDrawGizmos()
+    {
+        if (!simulateNetworkPlayer) return;
+        //var smoothedPos = Vector3.Slerp(transform.position, serverPos, networkSmoothingFactor * Time.deltaTime);
+        Gizmos.color = new Color(0,1, 0, 0.6f);
+        Gizmos.DrawCube(serverPos, Vector3.one *1.2f);
+    }
 }
