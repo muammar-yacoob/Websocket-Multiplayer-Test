@@ -11,7 +11,7 @@ public class SyncServerPlayer : MonoBehaviour
     [SerializeField] [Range(0.01f, 1f)] private float networkSmoothingFactor = 0.05f; //1 being realtime
     [SerializeField] TMP_Text fpsText;
     [SerializeField] bool simulateNetworkPlayer;
-    [SerializeField] [Range(0.01f, 1f)] private float simulatedDelay;
+    [SerializeField] [Range(0.0f, 1f)] private float simulatedDelay;
 
     private float FPSUpdateThresh = 1f;
     private float lastFPS;
@@ -82,7 +82,8 @@ public class SyncServerPlayer : MonoBehaviour
     }
     private void OnDrawGizmos()
     {
-        if (!simulateNetworkPlayer) return;
+        if (!simulateNetworkPlayer || !Application.isPlaying) return;
+
         //var smoothedPos = Vector3.Slerp(transform.position, serverPos, networkSmoothingFactor * Time.deltaTime);
         Gizmos.color = new Color(0,1, 0, 0.6f);
         Gizmos.DrawCube(serverPos, Vector3.one *1.2f);

@@ -248,7 +248,10 @@ MonoBehaviour:
   players:
   - {fileID: 686289888}
   - {fileID: 882751619}
-  networkSmoothingFactor: 0.5
+  networkSmoothingFactor: 0.01
+  simulateNetworkPlayer: 1
+  simulatedDelay: 0.131
+  fpsText: {fileID: 1165026957}
 --- !u!4 &184464013
 Transform:
   m_ObjectHideFlags: 0
@@ -424,7 +427,7 @@ GameObject:
   - component: {fileID: 686289884}
   - component: {fileID: 686289889}
   m_Layer: 0
-  m_Name: BlueSphere
+  m_Name: BlueCylinder
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -503,7 +506,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 686289882}
-  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!4 &686289888
 Transform:
   m_ObjectHideFlags: 0
@@ -685,7 +688,7 @@ GameObject:
   - component: {fileID: 882751615}
   - component: {fileID: 882751620}
   m_Layer: 0
-  m_Name: RedSphere
+  m_Name: RedCylinder
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -764,7 +767,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 882751613}
-  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!4 &882751619
 Transform:
   m_ObjectHideFlags: 0
