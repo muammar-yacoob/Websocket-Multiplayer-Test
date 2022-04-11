@@ -9,7 +9,7 @@ public class SyncServerPlayer : MonoBehaviour
 {
     [Header("Network Parameters")]
     [SerializeField] [Range(0.01f, 1f)] private float networkSmoothingFactor = 0.05f; //1 being realtime
-    [SerializeField] TMP_Text delayText;
+    [SerializeField] TMP_Text fpsText;
     [SerializeField] bool simulateNetworkPlayer;
 
     private float FPSUpdateThresh = 1f;
@@ -29,7 +29,7 @@ public class SyncServerPlayer : MonoBehaviour
         Gizmos.DrawCube(smoothedPos, Vector3.one *0.95f);
     }
 
-    private void Update()
+    private void LateUpdate()
     {
         syncRemotePos();
     }
@@ -78,10 +78,11 @@ public class SyncServerPlayer : MonoBehaviour
         var currentFPS = 1 / elapsedTime;
         if (Mathf.Abs(currentFPS - lastFPS) < FPSUpdateThresh)
         {
-            delayText.text = "Network FPS: " + Mathf.Round(1 / elapsedTime).ToString();
+            fpsText.text = "Network FPS: " + Mathf.Round(1 / elapsedTime).ToString();
         }
         lastFPS = currentFPS;
-        Debug.Log($"Time Elapsed{elapsedTime}, i.e.{1 / elapsedTime}/second");
+        //Debug.Log($"Time Elapsed{elapsedTime}, i.e.{currentFPS}");
+        fpsText.text = currentFPS.ToString("00");
     }
 
 
