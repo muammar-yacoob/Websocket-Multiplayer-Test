@@ -29,7 +29,7 @@ public class SyncManager : MonoBehaviour
         playersDataSent = new List<PlayerData>();
         lastPlayersDataSent = new List<PlayerData>();
 
-        //initialise playersData
+        //initialise playersData after spawn
         if (players.Count > 0)
         {
             players.ToList().ForEach(p => playersDataSent.Add(new PlayerData(
@@ -43,16 +43,22 @@ public class SyncManager : MonoBehaviour
     
     private void RefreshPlayersData()
     {
+        if (players.Count == 0) return;
+
         int ctr = 0;
-        bool dataChanged = false;
-        //playersDataSent.Clear();//Slower
+        bool dataChanged = false; //reset changes flag
         foreach (var player in players)
         {
-            if (player.localPosition.Shorten(2) == playersDataSent[ctr].Pos &&
-                player.localRotation.eulerAngles.Shorten(2) == playersDataSent[ctr].Rot) continue; //skip player update
+            if (lastPlayersDataSent.Count < 1) break ;
+            if (player.localPosition.Shorten(2) == lastPlayersDataSent[ctr].Pos &&
+                player.localRotation.eulerAngles.Shorten(2) == lastPlayersDataSent[ctr].Rot) continue; //skip player update
 
             //A Player's Data has changed!
             dataChanged = true;
+            //what changed?
+            Debug.Log($"Changed: {player.name}, Old Pos: {lastPlayersDataSent[ctr].Pos}, New Pos:{player.localPosition.Shorten(2)}, " +
+                $"new rot {player.localRotation.eulerAngles.Shorten(2)}");
+
             playersDataSent.RemoveAt(ctr);
             playersDataSent.Insert(ctr, new PlayerData(
                 player.GetInstanceID(),
@@ -66,15 +72,11 @@ public class SyncManager : MonoBehaviour
         if (dataChanged)
         {
             var changesFound = new List<PlayerData>();
-            
             changesFound = lastPlayersDataSent.Except(playersDataSent).ToList();
-            //Debug.Log(JsonConvert.SerializeObject(changesFound));
-            changesFound = playersDataSent.Except(lastPlayersDataSent).ToList();
-            //Debug.Log(JsonConvert.SerializeObject(changesFound));
             //string playersDataJson = JsonConvert.ToJson(changesFound);
             string playerDataJson = JsonConvert.SerializeObject(playersDataSent);
 
-            Debug.Log(playerDataJson);
+            //Debug.Log(playerDataJson);
             StartCoroutine(Post(serverURL, playerDataJson));
         }
         lastPlayersDataSent = playersDataSent;

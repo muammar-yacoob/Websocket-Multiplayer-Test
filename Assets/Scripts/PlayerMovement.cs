@@ -32,12 +32,26 @@ public class PlayerMovement : MonoBehaviour
             moveDirection = transform.TransformDirection(moveDirection);
             moveDirection *= moveSpeed;
             if (Input.GetButton("Jump"))
+            {
                 moveDirection.y = jumpSpeed;
+            }
         }
         moveDirection.y -= gravity * Time.deltaTime;
+
+        //Move
         controller.Move(moveDirection * Time.deltaTime);
+
+        //Rotate
+        var rot = Input.mouseScrollDelta.y;
+        if (rot != 0)
+            transform.Rotate(Vector3.up * rot, Space.Self);
+
+        //Respawn
         if (transform.position.y < -50)
+        {
             transform.position = startPos;
+            moveDirection.y = 0;
+        }
     }
 
 

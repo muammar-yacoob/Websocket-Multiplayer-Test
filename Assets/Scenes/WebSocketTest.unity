@@ -246,9 +246,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 986951339bd605e4ea16afc3f5b30e68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  players:
-  - {fileID: 0}
-  - {fileID: 0}
   networkSmoothingFactor: 0.01
   simulateNetworkPlayer: 1
   simulatedDelay: 0.131
@@ -279,6 +276,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 77e0193d13469fb488128507db319236, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  playerPrefab: {fileID: 5274070126178719024, guid: 27a164bf18a91ce469471a21b65ff2ed, type: 3}
+  countX: 5
+  countY: 5
   playerColors:
   - {r: 0.91372555, g: 0.9176471, b: 0.9490197, a: 1}
   - {r: 1, g: 0.91372555, b: 0.4784314, a: 1}
@@ -295,7 +295,6 @@ MonoBehaviour:
   - {r: 0.627451, g: 0.2784314, b: 0.21176472, a: 1}
   - {r: 0.30980393, g: 0.14117648, b: 0.37254903, a: 1}
   - {r: 0, g: 0, b: 0, a: 1}
-  playerPrefab: {fileID: 5274070126178719024, guid: 27a164bf18a91ce469471a21b65ff2ed, type: 3}
 --- !u!1 &455999400
 GameObject:
   m_ObjectHideFlags: 0
@@ -864,7 +863,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1472500060}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: -0.5, z: 0}
   m_LocalScale: {x: 5, y: 5, z: 5}
   m_Children: []
   m_Father: {fileID: 826051561}
