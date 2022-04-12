@@ -32,7 +32,11 @@ public class SyncManager : MonoBehaviour
         //initialise playersData
         if (players.Count > 0)
         {
-            players.ToList().ForEach(p => playersDataSent.Add(new PlayerData(p.GetInstanceID(), p.localPosition.Shorten(2))));
+            players.ToList().ForEach(p => playersDataSent.Add(new PlayerData(
+                p.GetInstanceID(),
+                p.localPosition.Shorten(2),
+                p.localRotation.eulerAngles.Shorten(2)
+                )));
         }
     }
     private void Update() => RefreshPlayersData();
@@ -44,12 +48,17 @@ public class SyncManager : MonoBehaviour
         //playersDataSent.Clear();//Slower
         foreach (var player in players)
         {
-            if (player.localPosition.Shorten(2) == playersDataSent[ctr].Pos) continue; //skip update to save time
+            if (player.localPosition.Shorten(2) == playersDataSent[ctr].Pos &&
+                player.localRotation.eulerAngles.Shorten(2) == playersDataSent[ctr].Rot) continue; //skip player update
 
             //A Player's Data has changed!
             dataChanged = true;
             playersDataSent.RemoveAt(ctr);
-            playersDataSent.Insert(ctr, new PlayerData(player.GetInstanceID(), player.localPosition.Shorten(2)));
+            playersDataSent.Insert(ctr, new PlayerData(
+                player.GetInstanceID(),
+                player.localPosition.Shorten(2),
+                player.localRotation.eulerAngles.Shorten(2)
+                ));
             ctr++;
         }
 
@@ -62,7 +71,6 @@ public class SyncManager : MonoBehaviour
             //Debug.Log(JsonConvert.SerializeObject(changesFound));
             changesFound = playersDataSent.Except(lastPlayersDataSent).ToList();
             //Debug.Log(JsonConvert.SerializeObject(changesFound));
-
             //string playersDataJson = JsonConvert.ToJson(changesFound);
             string playerDataJson = JsonConvert.SerializeObject(playersDataSent);
 
@@ -130,16 +138,8 @@ public class SyncManager : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (!simulateNetworkPlayer || !Application.isPlaying)
-        {
-            return;
-        }
-
+        if (!simulateNetworkPlayer || !Application.isPlaying || playersDataRcvd == null) return;
         Gizmos.color = new Color(0, 1, 0, 0.6f);
-        if (playersDataRcvd == null)
-        {
-            return;
-        }
 
         foreach (var playerData in playersDataRcvd)
         {
@@ -152,7 +152,8 @@ public class SyncManager : MonoBehaviour
 
                 if (player.GetInstanceID() == playerData.PlayerID)
                 {
-                    var smoothedPos = Vector3.Slerp(player.position, playerData.Pos, networkSmoothingFactor * Time.deltaTime);
+                    var smoothedPos = Vector3.Slerp(player.localPosition, playerData.Pos, networkSmoothingFactor * Time.deltaTime);
+                    //Gizmos.matrix = player.worldToLocalMatrix;
                     Gizmos.DrawCube(playerData.Pos, Vector3.one * 1.2f);
                 }
             }
@@ -161,21 +162,23 @@ public class SyncManager : MonoBehaviour
     public static void AddPlayer(Transform player) => players.Add(player);
 }
 
-[Serializable]
+[System.Serializable]
 public class PlayerData
 {
     //these will have to match field names on the server
     public int PlayerID;
     public Vector3 Pos;
+    public Vector3 Rot;
 
-    public PlayerData(int playerID, Vector3 pos)
+    public PlayerData(int playerID, Vector3 pos, Vector3 rot)
     {
         PlayerID = playerID;
         Pos = pos;
+        Rot = rot;
     }
 }
 
-public static class VectorExtensions
+public static class TransformExtensions
 {
     public static Vector3 Shorten(this Vector3 pos, int precesion)
     {
@@ -183,6 +186,6 @@ public static class VectorExtensions
         var yy = Math.Round(Convert.ToDouble(pos.y), precesion);
         var zz = Math.Round(Convert.ToDouble(pos.z), precesion);
 
-        return new Vector3((float) xx ,(float)yy, (float)zz);
+        return new Vector3((float)xx, (float)yy, (float)zz);
     }
 }

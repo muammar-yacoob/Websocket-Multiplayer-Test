@@ -31,7 +31,7 @@ public class SyncServerPlayer : MonoBehaviour
 
     void syncRemotePos()
     {
-        var playerData = new PlayerData(transform.GetInstanceID(), transform.position);
+        var playerData = new PlayerData(transform.GetInstanceID(), transform.position.Shorten(2),transform.rotation.eulerAngles.Shorten(2));
         string playersDataJson = JsonConvert.SerializeObject(playerData); //convert to JSON
 
         StartCoroutine(Post(serverURL, playersDataJson));
