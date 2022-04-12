@@ -6,7 +6,7 @@ public class PlayerSpawner : MonoBehaviour
 {
     [SerializeField] List<Color> playerColors;
     [SerializeField] Transform playerPrefab;
-    private void Awake() => SpawnPlayers(5, 5, 1.2f);
+    private void Awake() => SpawnPlayers(1, 1, 1.2f);
 
     private void ColorPlayer(Transform player)
     {
@@ -19,14 +19,15 @@ public class PlayerSpawner : MonoBehaviour
     internal void SpawnPlayers(int rows, int cols, float padding)
     {
         var parentTrans = FindObjectOfType<SyncManager>().transform;
-        for (int i = 1; i < rows; i++)
+        for (int i = 0; i < rows; i++)
         {
-            for (int j = 1; j < cols; j++)
+            for (int j = 0; j < cols; j++)
             {
                 var pos = new Vector3(i * padding, 0, j * padding);
                 var player = Instantiate(playerPrefab, pos, Quaternion.identity);
                 ColorPlayer(player);
                 player.SetParent(parentTrans);
+                SyncManager.AddPlayer(player);
             }
         }
     }

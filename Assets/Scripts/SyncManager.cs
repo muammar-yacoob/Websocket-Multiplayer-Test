@@ -1,20 +1,20 @@
+using Newtonsoft.Json;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
-using System.Linq;
-using Newtonsoft.Json;
 
 public class SyncManager : MonoBehaviour
 {
-    [SerializeField] private List<Transform> players;
     [SerializeField] [Range(0.01f, 1f)] private float networkSmoothingFactor = 0.5f; //1 being realtime
-    [SerializeField] bool simulateNetworkPlayer;
+    [SerializeField] private bool simulateNetworkPlayer;
     [SerializeField] [Range(0.0f, 1f)] private float simulatedDelay;
-    [SerializeField] TMP_Text fpsText;
-    
+    [SerializeField] private TMP_Text fpsText;
+    private static List<Transform> players = new List<Transform>();
 
     private string serverURL;
     private List<PlayerData> lastPlayersDataSent;
@@ -23,7 +23,6 @@ public class SyncManager : MonoBehaviour
     private float lastFPS;
     private float FPSUpdateThresh = 1f;
 
-
     private void Start()
     {
         serverURL = $"localhost:8000/unity";
@@ -31,53 +30,54 @@ public class SyncManager : MonoBehaviour
         lastPlayersDataSent = new List<PlayerData>();
 
         //initialise playersData
-        //players.ToList().ForEach(p => playersData.Add(new PlayerData(p.GetInstanceID(), p.name, p.position)));
-
-        players = GetComponentsInChildren<Transform>().ToList();
-        foreach (var player in players)
+        if (players.Count > 0)
         {
-            //populate initial players data
-            playersDataSent.Add(new PlayerData(player.GetInstanceID(), player.name, player.position));
+            players.ToList().ForEach(p => playersDataSent.Add(new PlayerData(p.GetInstanceID(), p.localPosition.Shorten(2))));
         }
     }
-
-    private void Update() => syncRemotePos();
-
-    private void syncRemotePos()
+    private void Update() => RefreshPlayersData();
+    
+    private void RefreshPlayersData()
     {
-        //int ctr = 0;
-        playersDataSent.Clear();//Slower
+        int ctr = 0;
+        bool dataChanged = false;
+        //playersDataSent.Clear();//Slower
         foreach (var player in players)
         {
-            var pos = player.position;
-            //if (pos == playersData[ctr].pos) continue; //skip update to save time
+            if (player.localPosition.Shorten(2) == playersDataSent[ctr].Pos) continue; //skip update to save time
 
-            //playersData.RemoveAt(ctr);
-            //playersData.Insert(ctr, new PlayerData(player.GetInstanceID(), player.name, player.position));
-            //playersData[ctr] = 
-            //ctr++;
-            var pData = new PlayerData(player.GetInstanceID(), player.name, player.position);
-
-            playersDataSent.Add(pData);
+            //A Player's Data has changed!
+            dataChanged = true;
+            playersDataSent.RemoveAt(ctr);
+            playersDataSent.Insert(ctr, new PlayerData(player.GetInstanceID(), player.localPosition.Shorten(2)));
+            ctr++;
         }
 
-        //bool dataChanged = Enumerable.SequenceEqual(playersDataSent.OrderBy(e => e), lastPlayersDataSent.OrderBy(e => e));
-        bool dataChanged = Enumerable.SequenceEqual(playersDataSent,lastPlayersDataSent);
+        //bool dataChanged = !Enumerable.SequenceEqual(playersDataSent, lastPlayersDataSent);
         if (dataChanged)
         {
-            //Debug.Log("player moved, sending...");
-            string playersDataJson = JsonConvert.SerializeObject(playersDataSent); //convert to JSON
-            StartCoroutine(Post(serverURL, playersDataJson));
+            var changesFound = new List<PlayerData>();
+            
+            changesFound = lastPlayersDataSent.Except(playersDataSent).ToList();
+            //Debug.Log(JsonConvert.SerializeObject(changesFound));
+            changesFound = playersDataSent.Except(lastPlayersDataSent).ToList();
+            //Debug.Log(JsonConvert.SerializeObject(changesFound));
+
+            //string playersDataJson = JsonConvert.ToJson(changesFound);
+            string playerDataJson = JsonConvert.SerializeObject(playersDataSent);
+
+            Debug.Log(playerDataJson);
+            StartCoroutine(Post(serverURL, playerDataJson));
         }
         lastPlayersDataSent = playersDataSent;
     }
 
-    IEnumerator Post(string url, string bodyJsonString)
+    private IEnumerator Post(string url, string bodyJsonString)
     {
         var request = new UnityWebRequest(url, "GET");//POST
         byte[] bodyRaw = Encoding.UTF8.GetBytes(bodyJsonString);
-        request.uploadHandler = (UploadHandler)new UploadHandlerRaw(bodyRaw);
-        request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
+        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        request.downloadHandler = new DownloadHandlerBuffer();
         //request.SetRequestHeader("Content-type", "text/plain");
         request.SetRequestHeader("Content-Type", "application/json");
 
@@ -88,7 +88,7 @@ public class SyncManager : MonoBehaviour
 
         if (request.result != UnityWebRequest.Result.Success)
         {
-            Debug.LogError(request.error,this);
+            Debug.LogError(request.error, this);
         }
         else
         {
@@ -98,13 +98,13 @@ public class SyncManager : MonoBehaviour
         }
     }
 
-    void ProcessServerResponse(string rawResponse)
+    private void ProcessServerResponse(string rawResponse)
     {
         playersDataRcvd = JsonConvert.DeserializeObject<List<PlayerData>>(rawResponse);
 
         foreach (var playerData in playersDataRcvd)
         {
-            foreach(var player in players)
+            foreach (var player in players)
             {
                 if (player.GetInstanceID() == playerData.PlayerID)
                 {
@@ -130,14 +130,26 @@ public class SyncManager : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (!simulateNetworkPlayer || !Application.isPlaying) return;
+        if (!simulateNetworkPlayer || !Application.isPlaying)
+        {
+            return;
+        }
 
         Gizmos.color = new Color(0, 1, 0, 0.6f);
-        if (playersDataRcvd == null) return;
+        if (playersDataRcvd == null)
+        {
+            return;
+        }
+
         foreach (var playerData in playersDataRcvd)
         {
             foreach (var player in players)
             {
+                if (player == transform)
+                {
+                    continue; //skips container
+                }
+
                 if (player.GetInstanceID() == playerData.PlayerID)
                 {
                     var smoothedPos = Vector3.Slerp(player.position, playerData.Pos, networkSmoothingFactor * Time.deltaTime);
@@ -146,26 +158,31 @@ public class SyncManager : MonoBehaviour
             }
         }
     }
+    public static void AddPlayer(Transform player) => players.Add(player);
 }
 
-
+[Serializable]
 public class PlayerData
 {
     //these will have to match field names on the server
     public int PlayerID;
-    public string PlayerName;
     public Vector3 Pos;
 
-    public PlayerData(int playerID, string playerName, Vector3 pos)
+    public PlayerData(int playerID, Vector3 pos)
     {
         PlayerID = playerID;
-        PlayerName = playerName;
         Pos = pos;
     }
 }
 
-#region using Unity JsonUtility
-//PlayerData d1 = JsonUtility.FromJson<PlayerData>(rawResponse);
-//Debug.Log($"PlayerID:{d1.playerID}, Pos{d1.pos.X}");
+public static class VectorExtensions
+{
+    public static Vector3 Shorten(this Vector3 pos, int precesion)
+    {
+        var xx = Math.Round(Convert.ToDouble(pos.x), precesion);
+        var yy = Math.Round(Convert.ToDouble(pos.y), precesion);
+        var zz = Math.Round(Convert.ToDouble(pos.z), precesion);
 
-#endregion
+        return new Vector3((float) xx ,(float)yy, (float)zz);
+    }
+}
