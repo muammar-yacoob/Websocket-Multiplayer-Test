@@ -10,76 +10,91 @@ using UnityEngine.Networking;
 
 public class SyncManager : MonoBehaviour
 {
+    [SerializeField] private string serverURL= $"localhost:8000/unity";
+    [SerializeField] [Range(0.01f, 1f)] private float updateFrequency = 0.3f;
     [SerializeField] [Range(0.01f, 1f)] private float networkSmoothingFactor = 0.5f; //1 being realtime
     [SerializeField] private bool simulateNetworkPlayer;
     [SerializeField] [Range(0.0f, 1f)] private float simulatedDelay;
     [SerializeField] private TMP_Text fpsText;
     private static List<Transform> players = new List<Transform>();
 
-    private string serverURL;
-    private List<PlayerData> lastPlayersDataSent;
-    private List<PlayerData> playersDataSent;
-    private List<PlayerData> playersDataRcvd;
+
+    private List<PlayerData> playerData_Last = new List<PlayerData>();
+    private List<PlayerData> playerData_Current = new List<PlayerData>();
+    private List<PlayerData> playerData_Recieved = new List<PlayerData>();
+
     private float lastFPS;
     private float FPSUpdateThresh = 1f;
 
+    private float timer;
+
     private void Start()
     {
-        serverURL = $"localhost:8000/unity";
-        playersDataSent = new List<PlayerData>();
-        lastPlayersDataSent = new List<PlayerData>();
 
         //initialise playersData after spawn
         if (players.Count > 0)
         {
-            players.ToList().ForEach(p => playersDataSent.Add(new PlayerData(
+            players.ToList().ForEach(p => playerData_Current.Add(new PlayerData(
                 p.GetInstanceID(),
                 p.localPosition.Shorten(2),
                 p.localRotation.eulerAngles.Shorten(2)
                 )));
         }
+
+        playerData_Last = new List<PlayerData>(playerData_Current);
     }
-    private void Update() => RefreshPlayersData();
-    
+    private void Update()
+    {
+        if (CanUpdate)
+        {
+            timer = 0;
+            RefreshPlayersData();
+        }
+
+        timer += Time.deltaTime;
+    }
+    private bool CanUpdate => timer >= updateFrequency;
+
     private void RefreshPlayersData()
     {
-        if (players.Count == 0) return;
-
         int ctr = 0;
-        bool dataChanged = false; //reset changes flag
+        bool hasChanged = false;
+        var changes = new List<PlayerData>();
+
         foreach (var player in players)
         {
-            if (lastPlayersDataSent.Count < 1) break ;
-            if (player.localPosition.Shorten(2) == lastPlayersDataSent[ctr].Pos &&
-                player.localRotation.eulerAngles.Shorten(2) == lastPlayersDataSent[ctr].Rot) continue; //skip player update
+            //get player scene data
+            var id = player.GetInstanceID();
+            var pos = player.localPosition.Shorten(2);
+            var rot = player.localRotation.eulerAngles.Shorten(2);
 
-            //A Player's Data has changed!
-            dataChanged = true;
-            //what changed?
-            Debug.Log($"Changed: {player.name}, Old Pos: {lastPlayersDataSent[ctr].Pos}, New Pos:{player.localPosition.Shorten(2)}, " +
-                $"new rot {player.localRotation.eulerAngles.Shorten(2)}");
 
-            playersDataSent.RemoveAt(ctr);
-            playersDataSent.Insert(ctr, new PlayerData(
-                player.GetInstanceID(),
-                player.localPosition.Shorten(2),
-                player.localRotation.eulerAngles.Shorten(2)
-                ));
+
+            if ((pos != playerData_Last[ctr].Pos)
+              ||(rot != playerData_Last[ctr].Rot))
+            {
+                //Something changed!
+                hasChanged = true;
+                var change = new PlayerData(id, pos, rot);
+                changes.Add(change);
+                //Debug.Log(change.Pos.z);
+            }
+
+            //update current player data
+            playerData_Current[ctr].Pos = pos;
+            playerData_Current[ctr].Rot = rot;
+
             ctr++;
         }
 
-        //bool dataChanged = !Enumerable.SequenceEqual(playersDataSent, lastPlayersDataSent);
-        if (dataChanged)
+        if (hasChanged)
         {
-            var changesFound = new List<PlayerData>();
-            changesFound = lastPlayersDataSent.Except(playersDataSent).ToList();
-            //string playersDataJson = JsonConvert.ToJson(changesFound);
-            string playerDataJson = JsonConvert.SerializeObject(playersDataSent);
-
-            //Debug.Log(playerDataJson);
+            string playerDataJson = JsonConvert.SerializeObject(changes);
             StartCoroutine(Post(serverURL, playerDataJson));
         }
-        lastPlayersDataSent = playersDataSent;
+
+        playerData_Last = new List<PlayerData>(playerData_Current);
+        //playerData_Last = new List<PlayerData>(playerData_Current);
     }
 
     private IEnumerator Post(string url, string bodyJsonString)
@@ -110,9 +125,9 @@ public class SyncManager : MonoBehaviour
 
     private void ProcessServerResponse(string rawResponse)
     {
-        playersDataRcvd = JsonConvert.DeserializeObject<List<PlayerData>>(rawResponse);
+        playerData_Recieved = JsonConvert.DeserializeObject<List<PlayerData>>(rawResponse);
 
-        foreach (var playerData in playersDataRcvd)
+        foreach (var playerData in playerData_Recieved)
         {
             foreach (var player in players)
             {
@@ -140,10 +155,10 @@ public class SyncManager : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (!simulateNetworkPlayer || !Application.isPlaying || playersDataRcvd == null) return;
+        if (!simulateNetworkPlayer || !Application.isPlaying || playerData_Recieved == null) return;
         Gizmos.color = new Color(0, 1, 0, 0.6f);
 
-        foreach (var playerData in playersDataRcvd)
+        foreach (var playerData in playerData_Recieved)
         {
             foreach (var player in players)
             {

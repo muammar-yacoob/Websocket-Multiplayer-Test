@@ -246,6 +246,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 986951339bd605e4ea16afc3f5b30e68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  serverURL: localhost:8000/unity
+  updateFrequency: 0.1
   networkSmoothingFactor: 0.01
   simulateNetworkPlayer: 1
   simulatedDelay: 0.131
@@ -277,8 +279,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerPrefab: {fileID: 5274070126178719024, guid: 27a164bf18a91ce469471a21b65ff2ed, type: 3}
-  countX: 5
-  countY: 5
+  countX: 10
+  countY: 10
   playerColors:
   - {r: 0.91372555, g: 0.9176471, b: 0.9490197, a: 1}
   - {r: 1, g: 0.91372555, b: 0.4784314, a: 1}
